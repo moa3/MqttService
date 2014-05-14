@@ -33,6 +33,16 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 	public List<String> aList = new ArrayList<String>();
 	private MessagesFragment listFragment;
 	
+	public void onBackPressed() {
+		FragmentManager fragmentManager = getFragmentManager();
+		if(fragmentManager.findFragmentByTag("settingsTag") == null) {
+			finish();
+		} else {
+			fragmentManager.beginTransaction()
+			.replace(R.id.fragment_container, listFragment).commit();
+		}
+	}
+
 	@Override  
 	public void onCreate(Bundle savedInstanceState)   
 	{  
@@ -85,7 +95,7 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 	protected void openSettings()
 	{
 		getFragmentManager().beginTransaction()
-        .replace(R.id.fragment_container, new SettingsFragment())
+        .replace(R.id.fragment_container, new SettingsFragment(), "settingsTag")
         .commit();
 	}
 
