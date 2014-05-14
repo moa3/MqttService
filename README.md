@@ -1,3 +1,10 @@
+This is my First attempt at a usefull Android app.
+
+It's derived from Dirk Moor''s MqttService.
+
+The initial idea and goal is to have an easily configurable notification system 
+on and Android phone using any mqtt broker
+
 MqttService for Android
 
 Roughly based on Dale Lane's blog article:
