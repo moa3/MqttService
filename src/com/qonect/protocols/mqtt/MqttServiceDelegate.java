@@ -6,6 +6,7 @@ import java.util.List;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import com.qonect.protocols.mqtt.service.MqttService;
@@ -39,6 +40,7 @@ public class MqttServiceDelegate
         actionIntent.putExtra(MqttService.MQTT_PUBLISH_MSG, payload);
         context.startService(actionIntent);
 	}
+	
 	
 	public static class StatusReceiver extends BroadcastReceiver  
 	{
@@ -101,7 +103,7 @@ public class MqttServiceDelegate
 		}
 		
 		public boolean hasHandlers(){
-			return messageHandlers.size() > 0;
+			return !messageHandlers.isEmpty();
 		}
 		
 	    @Override   
@@ -115,5 +117,14 @@ public class MqttServiceDelegate
 	        	messageHandler.handleMessage(topic, payload);
 	        }
 	    }  
+	}
+
+	public static void onSharedPreferenceChanged(Context context,
+			SharedPreferences sharedPreferences, String key) {
+		Intent actionIntent = new Intent(context, MqttService.class);
+        actionIntent.setAction(MqttService.MQTT_SETTINGS_CHANGED_INTENT);
+        actionIntent.putExtra(MqttService.MQTT_CHANGED_SETTINGS_KEY, key);
+        actionIntent.putExtra(MqttService.MQTT_CHANGED_SETTINGS_VALUE, sharedPreferences.getString(key, ""));
+        context.startService(actionIntent);
 	} 
 }

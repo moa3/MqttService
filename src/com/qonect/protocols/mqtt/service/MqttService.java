@@ -20,6 +20,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Binder;
@@ -28,8 +29,11 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.preference.PreferenceManager;
 import android.provider.Settings.Secure;
+import android.util.Log;
 
+import com.qonect.protocols.mqtt.SettingsFragment;
 import com.qonect.protocols.mqtt.impl.MqttConnectOptions;
 import com.qonect.protocols.mqtt.impl.MqttException;
 import com.qonect.protocols.mqtt.impl.MqttMessage;
@@ -56,7 +60,8 @@ import com.qonect.protocols.mqtt.logging.ConfigureLog4J;
  *    6 Nov 2012  
  */
 
-public class MqttService extends Service implements IMqttCallback
+public class MqttService extends Service 
+						 implements IMqttCallback
 {
 	private static final Logger LOG = Logger.getLogger(MqttService.class);
 	
@@ -90,6 +95,10 @@ public class MqttService extends Service implements IMqttCallback
     public static final int MQTT_NOTIFICATION_ONGOING = 1;  
     public static final int MQTT_NOTIFICATION_UPDATE  = 2;
     
+    public static final String MQTT_SETTINGS_CHANGED_INTENT = "com.qonect.services.mqtt.SETTINGSCHANGED";
+    public static final String MQTT_CHANGED_SETTINGS_KEY = "com.qonect.services.mqtt.CHANGEDSETTINGSKEY";
+    public static final String MQTT_CHANGED_SETTINGS_VALUE = "com.qonect.services.mqtt.CHANGEDSETTINGSVALUE";
+    
     
     // constants used to define MQTT connection status
     public enum ConnectionStatus 
@@ -108,6 +117,8 @@ public class MqttService extends Service implements IMqttCallback
 
     // MQTT constants
     public static final int MAX_MQTT_CLIENTID_LENGTH = 22;
+
+	
     
     /************************************************************************/
     /*    VARIABLES used to maintain state                                  */
@@ -131,7 +142,7 @@ public class MqttService extends Service implements IMqttCallback
     private List<IMqttTopic>        topics            	 = new ArrayList<IMqttTopic>();    
 
     
-    // defaults - this sample uses very basic defaults for it's interactions 
+    // defaults - this sample uses very basic defaults for its interactions 
     //   with message brokers
     private int             		brokerPortNumber     = 1883;
     private IMqttPersistence 		usePersistence       = null;
@@ -195,12 +206,12 @@ public class MqttService extends Service implements IMqttCallback
         //   commands to the Service 
         mBinder = new LocalBinder<MqttService>(this);
         
-        // get the broker settings out of app preferences
-        //   this is not the only way to do this - for example, you could use 
-        //   the Intent that starts the Service to pass on configuration values
-        //SharedPreferences settings = getSharedPreferences(APP_ID, MODE_PRIVATE);
-        brokerHostName = "profile-staging.jackzz.net";
-        topics.add(new MqttTopic("test-topic"));
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        
+        brokerHostName = sharedPref.getString(SettingsFragment.MQTT_BROKER_URL, "");
+        
+        String topicNames = sharedPref.getString(SettingsFragment.MQTT_TOPICS, "");
+        topics.add(new MqttTopic(topicNames));
         
         mqttClientFactory = new PahoMqttClientFactory(); 
                 
@@ -225,7 +236,7 @@ public class MqttService extends Service implements IMqttCallback
     	LOG.debug("onStartCommand: intent="+intent+", flags="+flags+", startId="+startId);    	
     	doStart(intent, startId);
         
-        // return START_NOT_STICKY - we want this Service to be left running 
+        //return START_NOT_STICKY;// - we want this Service to be left running 
         //  unless explicitly stopped, and it's process is killed, we want it to
         //  be restarted
         return START_STICKY;
@@ -255,14 +266,28 @@ public class MqttService extends Service implements IMqttCallback
 
     synchronized void handleStart(Intent intent, int startId) 
     {
-    	LOG.debug("handleStart");
+    	startMqttIfNeeded();
+        
+        if(!handleStartAction(intent)){
+        	// the Activity UI has started the MQTT service - this may be starting
+            //  the Service new for the first time, or after the Service has been
+            //  running for some time (multiple calls to startService don't start
+            //  multiple Services, but it does call this method multiple times)
+            // if we have been running already, we re-send any stored data        
+            rebroadcastStatus();
+        }
+    }
+
+
+    synchronized private void startMqttIfNeeded() {
+		LOG.debug("startMqttIfNeeded");
         // before we start - check for a couple of reasons why we should stop
     	        
         if (mqttClient == null) 
         {
             // we were unable to define the MQTT client connection, so we stop 
             //  immediately - there is nothing that we can do
-        	LOG.debug("handleStart: mqttClient == null");
+        	LOG.debug("startMqttIfNeeded: mqttClient == null");
             stopSelf();
             return;
         }
@@ -338,16 +363,7 @@ public class MqttService extends Service implements IMqttCallback
             pingSender = new PingSender();
             registerReceiver(pingSender, new IntentFilter(MQTT_PING_ACTION));
         }
-        
-        if(!handleStartAction(intent)){
-        	// the Activity UI has started the MQTT service - this may be starting
-            //  the Service new for the first time, or after the Service has been
-            //  running for some time (multiple calls to startService don't start
-            //  multiple Services, but it does call this method multiple times)
-            // if we have been running already, we re-send any stored data        
-            rebroadcastStatus();
-        }
-    }
+	}
     
     private boolean handleStartAction(Intent intent){
     	String action = intent.getAction(); 	
@@ -359,6 +375,11 @@ public class MqttService extends Service implements IMqttCallback
     	if(action.equalsIgnoreCase(MQTT_PUBLISH_MSG_INTENT)){
     		LOG.debug("handleStartAction: action == MQTT_PUBLISH_MSG_INTENT");
     		handlePublishMessageIntent(intent);
+    	}
+    	
+    	if(action.equalsIgnoreCase(MQTT_SETTINGS_CHANGED_INTENT)){
+    		LOG.debug("handleStartAction: action == MQTT_SETTINGS_CHANGED_INTENT");
+    		onSharedPreferenceChanged(intent);
     	}
     	
     	return true;
@@ -779,7 +800,6 @@ public class MqttService extends Service implements IMqttCallback
             {
             	mqttClient.subscribe(
             		topics.toArray(new IMqttTopic[topics.size()]));
-                
                 subscribed = true;
             }             
             catch (IllegalArgumentException e) 
@@ -994,7 +1014,7 @@ public class MqttService extends Service implements IMqttCallback
 		
 		try
 		{
-			mqttClient.publish(new MqttTopic("test-topic"), new MqttMessage(payload));
+			mqttClient.publish(new MqttTopic("topic"), new MqttMessage(payload));
 		}
 		catch(MqttException e)
 		{
@@ -1097,4 +1117,30 @@ public class MqttService extends Service implements IMqttCallback
             scheduleNextPing();
         }
     }
+
+	public void onSharedPreferenceChanged(Intent intent) {
+		String key = intent.getStringExtra(MQTT_CHANGED_SETTINGS_KEY);
+		String value = intent.getStringExtra(MQTT_CHANGED_SETTINGS_VALUE);
+
+		if (key.equals(SettingsFragment.MQTT_BROKER_URL)) {
+			disconnectFromBroker();
+			brokerHostName = value;
+			LOG.debug("new brocker url"+ brokerHostName);
+		}
+		if (key.equals(SettingsFragment.MQTT_TOPICS)) {
+			try {
+				mqttClient.unsubscribe(topics.toArray(new IMqttTopic[topics.size()]));
+				disconnectFromBroker();
+				topics.clear();
+				topics.add(new MqttTopic(value));
+				LOG.debug("new topics "+ value);
+			} catch (IllegalArgumentException e) {
+				LOG.error("subscribe failed - illegal argument", e);
+			} catch (MqttException e) {
+				LOG.error("subscribe failed - MQTT exception", e);
+			}		
+		}
+    	initMqttClient();
+		startMqttIfNeeded();
+	}
 }

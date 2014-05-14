@@ -1,18 +1,20 @@
 package com.qonect.protocols.mqtt;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import android.app.Activity;
+import android.app.FragmentManager;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.widget.ArrayAdapter;
 
 import com.qonect.protocols.mqtt.MqttServiceDelegate.MessageHandler;
 import com.qonect.protocols.mqtt.MqttServiceDelegate.MessageReceiver;
@@ -27,39 +29,18 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 	
 	private MessageReceiver msgReceiver;
 	private StatusReceiver statusReceiver;
-	
-	private TextView timestampView, topicView, messageView, statusView;
-	
-	private EditText publishEditView;
-	private Button publishButton;
+	public ArrayAdapter<String> adapter;
+	public List<String> aList = new ArrayList<String>();
+	private MessagesFragment listFragment;
 	
 	@Override  
 	public void onCreate(Bundle savedInstanceState)   
 	{  
 		LOG.debug("onCreate");
-		
-		super.onCreate(savedInstanceState);		
-		
+		super.onCreate(savedInstanceState);
+        
 		//Init UI
-		setContentView(R.layout.main_test);	
-		
-		timestampView = (TextView)findViewById(R.id.timestampView);
-		topicView = (TextView)findViewById(R.id.topicView);
-		messageView = (TextView)findViewById(R.id.messageView);	
-		statusView = (TextView)findViewById(R.id.statusView);
-		
-		publishEditView = (EditText)findViewById(R.id.publishEditView);
-		publishButton = (Button)findViewById(R.id.publishButton);
-		
-		publishButton.setOnClickListener(new OnClickListener() {			
-			@Override
-			public void onClick(View v) {
-				MqttServiceDelegate.publish(
-					MqttTestActivity.this, 
-					"the-topic-that-is-now-unused-in-service!", 
-					publishEditView.getText().toString().getBytes());
-			}
-		});
+		setContentView(R.layout.main_test);
 		
 		//Init Receivers
 		bindStatusReceiver();
@@ -67,7 +48,46 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 
 		//Start service if not started
 		MqttServiceDelegate.startService(this);
+		if (findViewById(R.id.fragment_container) != null) {
+
+			if (savedInstanceState != null) {
+				return;
+			}
+
+			// Create an instance of ExampleFragment
+			listFragment = new MessagesFragment();
+
+			getFragmentManager().beginTransaction()
+					.add(R.id.fragment_container, listFragment).commit();
+		}
 	} 
+	
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+	    // Inflate the menu items for use in the action bar
+	    MenuInflater inflater = getMenuInflater();
+	    inflater.inflate(R.menu.settings, menu);
+	    return super.onCreateOptionsMenu(menu);
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+	    // Handle presses on the action bar items
+	    switch (item.getItemId()) {
+	        case R.id.action_settings:
+	            openSettings();
+	            return true;
+	        default:
+	            return super.onOptionsItemSelected(item);
+	    }
+	}
+	
+	protected void openSettings()
+	{
+		getFragmentManager().beginTransaction()
+        .replace(R.id.fragment_container, new SettingsFragment())
+        .commit();
+	}
 
 	@Override  
 	protected void onDestroy()   
@@ -121,15 +141,16 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 		String message = new String(payload);
 		
 		LOG.debug("handleMessage: topic="+topic+", message="+message);
+		listFragment.updateAdapter(message);
 				
-		if(timestampView != null)timestampView.setText("When: "+getCurrentTimestamp());
-		if(topicView != null)topicView.setText("Topic: "+topic);
-		if(messageView != null)messageView.setText("Message: "+message);
+//		if(timestampView != null)timestampView.setText("When: "+getCurrentTimestamp());
+//		if(topicView != null)topicView.setText("Topic: "+topic);
+//		if(messageView != null)messageView.setText("Message: "+message);
 	}	
 
 	@Override
 	public void handleStatus(ConnectionStatus status, String reason) {
 		LOG.debug("handleStatus: status="+status+", reason="+reason);
-		if(statusView != null)statusView.setText("Status: "+status.toString()+" ("+reason+")");
+//		if(statusView != null)statusView.setText("Status: "+status.toString()+" ("+reason+")");
 	}
 }

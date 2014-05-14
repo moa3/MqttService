@@ -9,8 +9,9 @@ public interface IMqttClient
 	
 	public void publish(IMqttTopic topic, IMqttMessage message) throws MqttException;
 	
-	public void subscribe(IMqttTopic topic) throws IllegalArgumentException, MqttException;	
+	public void subscribe(IMqttTopic topic) throws IllegalArgumentException, MqttException;
 	public void subscribe(IMqttTopic[] topics) throws IllegalArgumentException, MqttException;
+	public void unsubscribe(IMqttTopic[] topic) throws IllegalArgumentException, MqttException;
 	
 	public boolean isConnected();
 	

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <EditTextPreference android:key="mqtt_url" 
+        android:defaultValue="test.mosquitto.org" 
+        android:title="@string/mqtt_url"/>
+    <EditTextPreference android:key="mqtt_topics" 
+        android:defaultValue="topic" 
+        android:title="@string/mqtt_topics"/>
+</PreferenceScreen>

@@ -117,6 +117,36 @@ public class PahoMqttClientWrapper implements IMqttClient
 	}
 	
 	@Override
+	public void unsubscribe(IMqttTopic[] topics) throws IllegalArgumentException,
+		MqttException
+	{
+		LOG.debug("unsubscribe(topics="+topics+")");
+		
+		int amount = topics.length;
+		
+		String[] topicarray = new String[amount];
+		int[] prioarray = new int[amount];
+		
+		for(int i = 0; i < amount; i++){
+			topicarray[i] = topics[i].getName();
+			prioarray[i] = topics[i].getQoS();
+		}
+		
+		try
+		{
+			this.client.unsubscribe(topicarray);
+		}
+		catch (MqttSecurityException e)
+		{
+			e.printStackTrace();
+		}
+		catch (org.eclipse.paho.client.mqttv3.MqttException e)
+		{
+			throw new MqttException(e);
+		}
+	}
+	
+	@Override
 	public void publish(IMqttTopic topic, IMqttMessage message)
 		throws MqttException
 	{
