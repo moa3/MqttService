@@ -32,7 +32,6 @@ public class SettingsFragment extends PreferenceFragment
     }
 	
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-    	LOG.debug("MEEERDE");
         Preference connectionPref = findPreference(key);
         // Set summary to be the user-description for the selected value
         LOG.debug(sharedPreferences.getString(key, ""));

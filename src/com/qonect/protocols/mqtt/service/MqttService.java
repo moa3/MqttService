@@ -31,7 +31,7 @@ import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
 import android.provider.Settings.Secure;
-import android.util.Log;
+import android.text.TextUtils;
 
 import com.qonect.protocols.mqtt.SettingsFragment;
 import com.qonect.protocols.mqtt.impl.MqttConnectOptions;
@@ -1132,8 +1132,14 @@ public class MqttService extends Service
 				mqttClient.unsubscribe(topics.toArray(new IMqttTopic[topics.size()]));
 				disconnectFromBroker();
 				topics.clear();
-				topics.add(new MqttTopic(value));
-				LOG.debug("new topics "+ value);
+				for (String s: TextUtils.split(value, ","))
+			    {
+					s = s.trim();
+					if(!TextUtils.isEmpty(s)) {
+						topics.add(new MqttTopic(s));
+						LOG.debug("new topic: "+ s);
+					}
+			    }
 			} catch (IllegalArgumentException e) {
 				LOG.error("subscribe failed - illegal argument", e);
 			} catch (MqttException e) {
