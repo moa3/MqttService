@@ -11,6 +11,9 @@ public class NotificationDispatcher {
 		else if(topic.matches(".+/bar$")) {
 			return new BarNotification(message, context);
 		}
+		else if(topic.matches(".+/copy$")) {
+			return new ClipboardNotification(message, context);
+		}
 		else {
 			return new BaseNotification(message, context);
 		}
