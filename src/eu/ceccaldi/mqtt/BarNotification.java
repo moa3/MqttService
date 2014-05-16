@@ -17,10 +17,10 @@ public class BarNotification extends NotificationHandler implements
 	public void doAction() {
 		NotificationManager mNotifyMgr = (NotificationManager) context
 				.getSystemService(Context.NOTIFICATION_SERVICE);
-		mNotifyMgr.notify(001, buildNotif());
+		mNotifyMgr.notify(001, buildNotification());
 	}
 
-	protected Notification buildNotif() {
+	protected Notification buildNotification() {
 		return new Notification.Builder(context)
 				.setSmallIcon(R.drawable.star_on)
 				.setContentTitle("MQTT Notification").setContentText(message)
