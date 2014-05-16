@@ -23,6 +23,9 @@ import com.qonect.protocols.mqtt.MqttServiceDelegate.StatusReceiver;
 import com.qonect.protocols.mqtt.service.MqttService;
 import com.qonect.protocols.mqtt.service.MqttService.ConnectionStatus;
 
+import eu.ceccaldi.mqtt.ActiveNotification;
+import eu.ceccaldi.mqtt.NotificationDispatcher;
+
 public class MqttTestActivity extends Activity implements MessageHandler, StatusHandler
 {	
 	private static final Logger LOG = Logger.getLogger(MqttTestActivity.class);
@@ -151,6 +154,10 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 		String message = new String(payload);
 		
 		LOG.debug("handleMessage: topic="+topic+", message="+message);
+		ActiveNotification an = NotificationDispatcher.getNotifier(topic, message, this);
+		if (an.isValid()) {
+			an.doAction();
+		}
 		listFragment.updateAdapter(message);
 				
 //		if(timestampView != null)timestampView.setText("When: "+getCurrentTimestamp());
