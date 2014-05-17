@@ -9,8 +9,12 @@ import org.apache.log4j.Logger;
 
 import android.app.Activity;
 import android.app.FragmentManager;
+import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -29,6 +33,7 @@ import eu.ceccaldi.mqtt.NotificationDispatcher;
 public class MqttTestActivity extends Activity implements MessageHandler, StatusHandler
 {	
 	private static final Logger LOG = Logger.getLogger(MqttTestActivity.class);
+	private static final String TAG = "moa333";
 	
 	private MessageReceiver msgReceiver;
 	private StatusReceiver statusReceiver;
@@ -46,21 +51,30 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 		}
 	}
 
-	@Override  
-	public void onCreate(Bundle savedInstanceState)   
-	{  
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
 		LOG.debug("onCreate");
 		super.onCreate(savedInstanceState);
-        
-		//Init UI
+
+		// Init UI
 		setContentView(R.layout.main_test);
-		
-		//Init Receivers
+
+		// Get intent, action and MIME type
+		Intent intent = getIntent();
+		String action = intent.getAction();
+		String type = intent.getType();
+
+		// Init Receivers
 		bindStatusReceiver();
 		bindMessageReceiver();
 
-		//Start service if not started
+		// Start service if not started
 		MqttServiceDelegate.startService(this);
+		if (Intent.ACTION_SEND.equals(action) && type != null) {
+			if ("text/plain".equals(type)) {
+				handleSendText(intent); // Handle text being sent
+			}
+		}
 		if (findViewById(R.id.fragment_container) != null) {
 
 			if (savedInstanceState != null) {
@@ -100,6 +114,20 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 		getFragmentManager().beginTransaction()
         .replace(R.id.fragment_container, new SettingsFragment(), "settingsTag")
         .commit();
+	}
+
+	protected void handleSendText(Intent intent) {
+		String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+		if (sharedText != null) {
+			SharedPreferences sharedPref = PreferenceManager
+					.getDefaultSharedPreferences(this);
+			String pubTopicName = sharedPref.getString(
+					SettingsFragment.MQTT_PUB_TOPIC, null);
+			if (pubTopicName != null) {
+				MqttServiceDelegate.publish(this, pubTopicName,
+						sharedText.getBytes());
+			}
+		}
 	}
 
 	@Override  

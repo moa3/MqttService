@@ -139,7 +139,8 @@ public class MqttService extends Service
     // taken from preferences
     //    topic we want to receive messages about
     //    can include wildcards - e.g.  '#' matches anything
-    private List<IMqttTopic>        topics            	 = new ArrayList<IMqttTopic>();    
+    private List<IMqttTopic>        subTopics            	 = new ArrayList<IMqttTopic>();
+    private List<IMqttTopic>        pubTopics            	 = new ArrayList<IMqttTopic>();
 
     
     // defaults - this sample uses very basic defaults for its interactions 
@@ -210,9 +211,17 @@ public class MqttService extends Service
         
         brokerHostName = sharedPref.getString(SettingsFragment.MQTT_BROKER_URL, "");
         
-        String topicNames = sharedPref.getString(SettingsFragment.MQTT_TOPICS, "");
-        topics.add(new MqttTopic(topicNames));
-        
+		String subTopicNames = sharedPref.getString(
+				SettingsFragment.MQTT_TOPICS, null);
+		if (subTopicNames != null) {
+			subTopics.add(new MqttTopic(subTopicNames));
+		}
+		String pubTopicName = sharedPref.getString(
+				SettingsFragment.MQTT_PUB_TOPIC, null);
+		if (pubTopicName != null) {
+			pubTopics.add(new MqttTopic(pubTopicName));
+		}
+
         mqttClientFactory = new PahoMqttClientFactory(); 
                 
         executor = Executors.newFixedThreadPool(2);
@@ -793,25 +802,20 @@ public class MqttService extends Service
             // quick sanity check - don't try and subscribe if we 
             //  don't have a connection            
             LOG.error("Unable to subscribe as we are not connected");
-        }
-        else 
-        {                                    
-            try 
-            {
-            	mqttClient.subscribe(
-            		topics.toArray(new IMqttTopic[topics.size()]));
-                subscribed = true;
-            }             
-            catch (IllegalArgumentException e) 
-            {
-            	LOG.error("subscribe failed - illegal argument", e);
-            } 
-            catch (MqttException e) 
-            {
-            	LOG.error("subscribe failed - MQTT exception", e);
-            }
-        }
-        
+		} else {
+			try {
+				mqttClient.subscribe(subTopics.toArray(new IMqttTopic[subTopics
+						.size()]));
+				mqttClient.subscribe(pubTopics.toArray(new IMqttTopic[pubTopics
+						.size()]));
+				subscribed = true;
+			} catch (IllegalArgumentException e) {
+				LOG.error("subscribe failed - illegal argument", e);
+			} catch (MqttException e) {
+				LOG.error("subscribe failed - MQTT exception", e);
+			}
+		}
+
         if (subscribed == false)
         {
             //
@@ -1011,10 +1015,11 @@ public class MqttService extends Service
 		}
 		
 		byte[] payload = intent.getByteArrayExtra(MQTT_PUBLISH_MSG);
+		String topic = intent.getStringExtra(MQTT_PUBLISH_MSG_TOPIC);
 		
 		try
 		{
-			mqttClient.publish(new MqttTopic("topic"), new MqttMessage(payload));
+			mqttClient.publish(new MqttTopic(topic), new MqttMessage(payload));
 		}
 		catch(MqttException e)
 		{
@@ -1125,28 +1130,42 @@ public class MqttService extends Service
 		if (key.equals(SettingsFragment.MQTT_BROKER_URL)) {
 			disconnectFromBroker();
 			brokerHostName = value;
-			LOG.debug("new brocker url"+ brokerHostName);
+			LOG.debug("new brocker url" + brokerHostName);
 		}
 		if (key.equals(SettingsFragment.MQTT_TOPICS)) {
 			try {
-				mqttClient.unsubscribe(topics.toArray(new IMqttTopic[topics.size()]));
+				mqttClient.unsubscribe(subTopics
+						.toArray(new IMqttTopic[subTopics.size()]));
 				disconnectFromBroker();
-				topics.clear();
-				for (String s: TextUtils.split(value, ","))
-			    {
+				subTopics.clear();
+				for (String s : TextUtils.split(value, ",")) {
 					s = s.trim();
-					if(!TextUtils.isEmpty(s)) {
-						topics.add(new MqttTopic(s));
-						LOG.debug("new topic: "+ s);
+					if (!TextUtils.isEmpty(s)) {
+						subTopics.add(new MqttTopic(s));
+						LOG.debug("new topic: " + s);
 					}
-			    }
+				}
 			} catch (IllegalArgumentException e) {
 				LOG.error("subscribe failed - illegal argument", e);
 			} catch (MqttException e) {
 				LOG.error("subscribe failed - MQTT exception", e);
-			}		
+			}
 		}
-    	initMqttClient();
+		if (key.equals(SettingsFragment.MQTT_PUB_TOPIC)) {
+			try {
+				mqttClient.unsubscribe(pubTopics
+						.toArray(new IMqttTopic[pubTopics.size()]));
+				disconnectFromBroker();
+				pubTopics.clear();
+				pubTopics.add(new MqttTopic(value));
+				LOG.debug("new topic: " + value);
+			} catch (IllegalArgumentException e) {
+				LOG.error("subscribe failed - illegal argument", e);
+			} catch (MqttException e) {
+				LOG.error("subscribe failed - MQTT exception", e);
+			}
+		}
+		initMqttClient();
 		startMqttIfNeeded();
 	}
 }

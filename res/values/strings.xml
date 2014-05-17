@@ -3,4 +3,5 @@
     <string name="mqtt_url">Broker URL</string>
     <string name="action_settings">Preferences</string>
     <string name="mqtt_topics">Topics</string>
+    <string name="mqtt_pub_topic">Publication Topic</string>
 </resources>

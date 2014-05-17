@@ -6,4 +6,7 @@
     <EditTextPreference android:key="mqtt_topics" 
         android:defaultValue="topic" 
         android:title="@string/mqtt_topics"/>
+    <EditTextPreference android:key="mqtt_pub_topic"
+        android:defaultValue="topic"
+        android:title="@string/mqtt_pub_topic"/>
 </PreferenceScreen>
