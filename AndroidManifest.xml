@@ -15,7 +15,7 @@
         android:allowBackup="true">
         
 		<service android:name=".service.MqttService" android:process=":MqttSubProcess"></service>		
-        <activity android:name="MqttTestActivity">
+        <activity android:name="MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

@@ -30,9 +30,9 @@ import com.qonect.protocols.mqtt.service.MqttService.ConnectionStatus;
 import eu.ceccaldi.mqtt.ActiveNotification;
 import eu.ceccaldi.mqtt.NotificationDispatcher;
 
-public class MqttTestActivity extends Activity implements MessageHandler, StatusHandler
+public class MainActivity extends Activity implements MessageHandler, StatusHandler
 {	
-	private static final Logger LOG = Logger.getLogger(MqttTestActivity.class);
+	private static final Logger LOG = Logger.getLogger(MainActivity.class);
 	private static final String TAG = "moa333";
 	
 	private MessageReceiver msgReceiver;
@@ -40,16 +40,16 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 	public ArrayAdapter<String> adapter;
 	public List<String> aList = new ArrayList<String>();
 	private MessagesFragment listFragment;
-	
-	public void onBackPressed() {
-		FragmentManager fragmentManager = getFragmentManager();
-		if(fragmentManager.findFragmentByTag("settingsTag") == null) {
-			finish();
-		} else {
-			fragmentManager.beginTransaction()
-			.replace(R.id.fragment_container, listFragment).commit();
-		}
-	}
+//	
+//	public void onBackPressed() {
+//		FragmentManager fragmentManager = getFragmentManager();
+//		if(fragmentManager.findFragmentByTag("settingsTag") == null) {
+//			finish();
+//		} else {
+//			fragmentManager.beginTransaction()
+//			.replace(R.id.fragment_container, listFragment).commit();
+//		}
+//	}
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -113,6 +113,7 @@ public class MqttTestActivity extends Activity implements MessageHandler, Status
 	{
 		getFragmentManager().beginTransaction()
         .replace(R.id.fragment_container, new SettingsFragment(), "settingsTag")
+        .addToBackStack(null)
         .commit();
 	}
 
